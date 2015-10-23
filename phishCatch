@@ -1,0 +1,55 @@
+#encoding:utf-8
+import urllib.request #从网站下载文件所必须的
+
+import pymysql #连接数据库所必需的
+
+import json #允许对下载得到json文件进行操作
+import codecs #格式转换用
+import time#实现自动更新所必需的
+
+interval = 3*60*60 #自动更新的时间间隔
+url = 'http://data.phishtank.com/data/9681cc0e3f0d6f118084020be15ae466bd5da8c6e0696419d29fbcc6972af9e1/online-valid.json.bz2' #获取钓鱼网站数据的网址
+  #自动更新程序
+def catchPhishes(): #获取网站及存储用函数
+      #下载包含钓鱼网站的bz2文件
+             #   urllib.request.urlretrieve(url,"online-valid.json.bz2")
+      #解压文件
+               
+
+      #连接mysql,建立phishWebs表
+                conn = pymysql.connect(host= 'localhost',user= 'root',passwd= 'root',port= 3306,charset='utf8')
+                cur = conn.cursor()
+                try:
+                    cur.execute("CREATE DATABASE myDB")
+                except Exception as e:
+                    print("Database already exists!")
+                finally:
+                    pass
+     #建表
+                cur.execute("USE myDB") 
+                cur.execute("CREATE TABLE phishWebs(phish_id INT, phish_detail_url Nvarchar(255), url Nvarchar(255), submission_time varchar(30), verified varchar(3), verification_time varchar(30), online varchar(3), target varchar(50) )")
+     #将json文件转换格式
+                data = []
+                with open('online-valid.json') as file:
+                 for line in file:
+                                   data.append(json.loads(line))
+                                   str = "\r\n"
+                 for item in data:
+                                   str = str + "insert into phishWebs(phish_id,phish_detail_url,url,submission_time,verified,verification_time,online,target) values "
+                                   str = str + "('%s','%s','%s','%s','%s','%s','%s','%s','%s');\r\n" % (item['phish_id'],item['phish_detail_url'],item['url'],item['submission_time'],item['verified'],item['verification_time'],item['online'],item['target'])
+
+                file_object = codecs.open('phishWebs.sql','w','utf-8')
+                file_object.write(str)
+                file_object.close()
+def run(interval): #整体运行函数
+                        while True:
+                            try:
+                                time_remaining = interval-time.time()%interval
+                                time.sleep(time_remaining)
+                                catchPhishes()
+                            except Exception as e:
+                                print(e)
+if __name__=="__main__":
+    catchPhishes()
+    run(interval)
+               
